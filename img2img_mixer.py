@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 from model import Img2ImgMixer
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 from model_config import model_parameters
 import gc
 
