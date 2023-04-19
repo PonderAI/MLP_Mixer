@@ -67,42 +67,6 @@ class MixerLayer(nn.Module):
         x = x + self.channel_mix(x)
         return x
 
-# class MixerLayer2(nn.Module):
-#     """
-#     Adds additional segmentation between the vertical and horizontal mixing of tokens with a
-#     skip connection in between.
-#     """
-
-
-#     def __init__(self, n_patches, f_hidden, embd_channels, dropout) -> None:
-#         super().__init__()
-
-#         self.h_token_mix = nn.Sequential(
-#             nn.LayerNorm(embd_channels),
-#             Rearrange('b h w c -> b c w h'),
-#             MlpLayer(n_patches, n_patches * f_hidden, dropout),
-#             Rearrange('b c w h -> b h w c'),
-#         )
-
-#         self.w_token_mix = nn.Sequential(
-#             nn.LayerNorm(embd_channels),
-#             Rearrange('b h w c -> b c h w'),
-#             MlpLayer(n_patches, n_patches * f_hidden, dropout),
-#             Rearrange('b c w h -> b h w c'),
-#         )
-
-#         self.channel_mix = nn.Sequential(
-#             nn.LayerNorm(embd_channels),
-#             MlpLayer(embd_channels, n_patches * f_hidden, dropout),
-#         )
-
-
-#     def forward(self, x):
-#         x = x + self.h_token_mix(x)
-#         x = x + self.w_token_mix(x)
-#         x = x + self.channel_mix(x)
-#         return x
-
 class PatchExpand(nn.Module):
     def __init__(self, patch_size, embd_channels, img_channels) -> None:
         super().__init__()
