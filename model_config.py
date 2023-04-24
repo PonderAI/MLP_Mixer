@@ -1,10 +1,10 @@
 model_parameters = [{"img_channels": 3, # RGB
                      "dropout": 0.2,
                      "embd_channels": 256,
-                     "patch_size": 16,
+                     "patch_size": 32,
                      "n_layers": 8,
                      "f_hidden": 8,
-                     "n_patches": 64, # img_size//patch_size
+                     "n_patches": 32, # img_size//patch_size
                     },
  
                     {"img_channels": 3, # RGB
