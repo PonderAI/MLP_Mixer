@@ -21,6 +21,7 @@ class PatchEmbedding(nn.Module):
         super().__init__()
         self.pos_embd = nn.Sequential(
             nn.Conv2d(img_channels, embd_dim, patch_size, patch_size), # [B, C, Nh, Nw] -> [B, 512, 64, 64]
+            nn.SiLU(),
             Rearrange('b c h w -> b h w c'), # [B, Nh, Nw, C] -> [N, 64, 64, 512] 
         )
     
@@ -29,14 +30,14 @@ class PatchEmbedding(nn.Module):
 
 class MlpLayer(nn.Module):
 
-    def __init__(self, dim, hidden_dim, dropout) -> None:
+    def __init__(self, dim, hidden_dim) -> None:
         super().__init__()
         self.ffwd = nn.Sequential(
             nn.Linear(dim, hidden_dim),
-            nn.Dropout(dropout),
-            nn.GELU(),
+            # nn.GELU(),
+            nn.SiLU(),
             nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout),
+            nn.SiLU(),
         )
 
     def forward(self, x):
@@ -44,27 +45,35 @@ class MlpLayer(nn.Module):
 
 class MixerLayer(nn.Module):
 
-    def __init__(self, n_patches, f_hidden, embd_channels, dropout) -> None:
+    def __init__(self, n_patches, f_hidden, embd_channels) -> None:
         super().__init__()
 
         self.token_mix = nn.Sequential(
             nn.LayerNorm(embd_channels),
             Rearrange('b h w c -> b c w h'),
-            MlpLayer(n_patches, n_patches * f_hidden, dropout),
+            MlpLayer(n_patches, n_patches * f_hidden),
             Rearrange('b c w h -> b c h w'),
-            MlpLayer(n_patches, n_patches * f_hidden, dropout),
+            MlpLayer(n_patches, n_patches * f_hidden),
             Rearrange('b c h w -> b h w c'),
         )
 
         self.channel_mix = nn.Sequential(
             nn.LayerNorm(embd_channels),
-            MlpLayer(embd_channels, n_patches * f_hidden, dropout),
+            MlpLayer(embd_channels, n_patches * f_hidden),
         )
+
+        # self.hyperpatch_mix = nn.Sequential(
+        #     nn.LayerNorm(embd_channels),
+        #     Rearrange('b h w c -> b c h w'),
+        #     nn.Conv2d(embd_channels, embd_channels, int(hp_area * patch_size + 1), stride=1, padding=int((hp_area * patch_size + 1)/2)),
+        #     Rearrange('b c h w -> b h w c'),
+        # )
 
 
     def forward(self, x):
         x = x + self.token_mix(x)
         x = x + self.channel_mix(x)
+        # x = x + self.hyperpatch_mix(x)
         return x
 
 class PatchExpand(nn.Module):
@@ -75,6 +84,9 @@ class PatchExpand(nn.Module):
         self.norm = nn.LayerNorm(embd_channels)
         self.channels = embd_channels
         self.proj = nn.Conv2d(embd_channels, img_channels, kernel_size=1, bias=False)
+
+        # self.proj = nn.Sequential(nn.Conv2d(embd_channels, img_channels, kernel_size=1, bias=False),
+        #                            nn.Tanh(),)
 
     def forward(self, x):
         x = self.expand(x) # [B, Nh, Nw, CP^2]
@@ -90,22 +102,25 @@ class PatchExpand(nn.Module):
         return self.proj(x) # [B, 3, H, W]
 
 class Img2ImgMixer(nn.Module):
-    def __init__(self, img_channels, embd_channels, patch_size, n_patches, f_hidden, dropout, n_layers) -> None:
+    def __init__(self, img_channels, embd_channels, patch_size, n_patches, f_hidden, n_layers) -> None:
         super().__init__()
         self.patch_embd = PatchEmbedding(img_channels, embd_channels, patch_size)
-        self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels, dropout) for _ in range(n_layers)])
+        self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels) for _ in range(n_layers)])
         self.patch_expand = PatchExpand(patch_size, embd_channels, img_channels)
 
         self.loss = nn.MSELoss()
 
     def forward(self, x, y): # x = [B, C, H, W] -> [B, 3, 1024, 1024]
-        x = self.patch_embd(x) # [B, Nh, Nw, C] -> [B, 64, 64, 512]
+        x_learned = self.patch_embd(x) # [B, Nh, Nw, C] -> [B, 64, 64, 512]
 
         for layer in self.layers:
-            x = layer(x)
+            x_learned = layer(x_learned)
 
-        x = self.patch_expand(x)
+        x_learned = self.patch_expand(x_learned)
 
-        loss = self.loss(x, y)
+        x_learned = torch.clamp(x + x_learned, 0, 1) # # Geometry + learned flowfield
+        y = torch.clamp(x + y, 0, 1) # Geometry + flowfield
 
-        return loss, x
+        loss = self.loss(x_learned, y)
+
+        return loss, x_learned
