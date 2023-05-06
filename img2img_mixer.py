@@ -45,6 +45,7 @@ for i, parameter_set in enumerate(model_parameters):
     Patch size: {parameter_set["patch_size"]}
     Layers: {parameter_set["n_layers"]}
     Linear hidden expansion: {parameter_set["f_hidden"]}
+    Neighbourhood: {parameter_set["neighbourhood"]}
     Number of patches: {parameter_set["n_patches"]}
     Learning Rate: {learning_rate}
     --------------------------------

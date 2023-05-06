@@ -4,6 +4,7 @@ model_parameters = [{"img_channels": 3, # RGB
                      "n_layers": 8,
                      "f_hidden": 8,
                      "n_patches": 64, # img_size//patch_size
+                     "neighbourhood": 7
                     },
  
                     # {"img_channels": 3, # RGB

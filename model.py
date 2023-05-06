@@ -27,6 +27,7 @@ class PatchEmbedding(nn.Module):
     def forward(self, x):
         return self.pos_embd(x)
 
+
 class MlpLayer(nn.Module):
 
     def __init__(self, dim, hidden_dim) -> None:
@@ -40,9 +41,10 @@ class MlpLayer(nn.Module):
     def forward(self, x):
         return self.ffwd(x)
 
+
 class MixerLayer(nn.Module):
 
-    def __init__(self, n_patches, f_hidden, embd_channels) -> None:
+    def __init__(self, n_patches, f_hidden, embd_channels, neighbourhood) -> None:
         super().__init__()
 
         self.token_mix = nn.Sequential(
@@ -62,18 +64,18 @@ class MixerLayer(nn.Module):
         self.hyperpatch_mix = nn.Sequential(
             nn.LayerNorm(embd_channels),
             Rearrange('b h w c -> b c h w'),
-            nn.Conv2d(embd_channels, embd_channels, kernel=7, stride=1, padding=3),
+            nn.Conv2d(embd_channels, embd_channels, kernel=neighbourhood, stride=1, padding=neighbourhood//2),
             nn.GELU(),
-            nn.Conv2d(embd_channels, embd_channels, kernel=7, stride=1, padding=3),
+            nn.Conv2d(embd_channels, embd_channels, kernel=neighbourhood, stride=1, padding=neighbourhood//2),
             Rearrange('b c h w -> b h w c'),
         )
-
 
     def forward(self, x):
         x = x + self.token_mix(x)
         x = x + self.channel_mix(x)
         x = x + self.hyperpatch_mix(x)
         return x
+
 
 class PatchExpand(nn.Module):
     def __init__(self, patch_size, embd_channels, img_channels) -> None:
@@ -83,7 +85,6 @@ class PatchExpand(nn.Module):
         self.norm = nn.LayerNorm(embd_channels)
         self.channels = embd_channels
         self.proj = nn.Conv2d(embd_channels, img_channels, kernel_size=1, bias=False)
-
 
     def forward(self, x):
         x = self.expand(x) # [B, Nh, Nw, CP^2]
@@ -97,12 +98,15 @@ class PatchExpand(nn.Module):
         x = rearrange(x, 'b h w c -> b c h w') # [B, C, H, W] 
 
         return self.proj(x) # [B, 3, H, W]
+    
+        return nn.ConvTranspose2d(embd_channels, img_channels, kernel_size=1)
+
 
 class Img2ImgMixer(nn.Module):
-    def __init__(self, img_channels, embd_channels, patch_size, n_patches, f_hidden, n_layers=1) -> None:
+    def __init__(self, img_channels, embd_channels, patch_size, n_patches, f_hidden, neighbourhood, n_layers) -> None:
         super().__init__()
         self.patch_embd = PatchEmbedding(img_channels, embd_channels, patch_size)
-        self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels) for _ in range(n_layers)])
+        self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels, neighbourhood) for _ in range(n_layers)])
         self.patch_expand = PatchExpand(patch_size, embd_channels, img_channels)
 
         self.loss = nn.MSELoss()
@@ -121,26 +125,3 @@ class Img2ImgMixer(nn.Module):
         loss = self.loss(x_learned, y)
 
         return loss, x_learned
-    
-# class HyperMixer(nn.Module):
-#     def __init__(self, img_channels, embd_channels, f_hidden) -> None:
-#         super().__init__()
-#         self.l1 = Img2ImgMixer(img_channels, embd_channels, 32, 32, f_hidden)
-#         # self.layers = nn.ModuleList([
-#         # Img2ImgMixer(img_channels, embd_channels, 16, 64, f_hidden),])
-#         # Img2ImgMixer(img_channels, embd_channels, 8, 128, f_hidden),
-#         # Img2ImgMixer(img_channels, embd_channels, 4, 256, f_hidden),
-#         # Img2ImgMixer(img_channels, embd_channels, 2, 512, f_hidden)])
-#         self.loss = nn.MSELoss()
-
-#     def forward(self, x, y):
-
-#         x_ = self.l1(x)
-#         # for layer in self.layers:  
-#         #     x_ = x_ + layer(x)
-
-#         x_ = torch.clamp(x + x_, 0, 1)
-#         y = torch.clamp(x + y, 0, 1)
-#         loss = self.loss(x_, y)
-
-#         return loss, x_
