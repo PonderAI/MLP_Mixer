@@ -65,8 +65,8 @@ for i, parameter_set in enumerate(model_parameters):
                     x = np.load(path/f"processed_with_corner_mask/{sample}_{angle}_geom.npy")
                     y = np.load(path/f"processed_with_corner_mask/{sample}_U_{angle}_4.npy")
 
-                    x_batch = torch.tensor(x).permute(2, 0, 1).unsqueeze(0).to(device)
-                    y_batch = torch.tensor(y).permute(2, 0, 1).unsqueeze(0).to(device)
+                    x_batch = torch.tensor(x, device=device).permute(2, 0, 1).unsqueeze(0)
+                    y_batch = torch.tensor(y, device=device).permute(2, 0, 1).unsqueeze(0)
 
                     loss, _ = model(x_batch, y_batch)
                     optimiser.zero_grad(set_to_none=True)
@@ -80,8 +80,8 @@ for i, parameter_set in enumerate(model_parameters):
                     model.eval()
                     x = np.load(path/f"processed_with_corner_mask/93_0_geom.npy")
                     y = np.load(path/f"processed_with_corner_mask/93_U_0_4.npy")
-                    x_batch = torch.tensor(x).permute(2, 0, 1).unsqueeze(0).to(device)
-                    y_batch = torch.tensor(y).permute(2, 0, 1).unsqueeze(0).to(device)
+                    x_batch = torch.tensor(x, device=device).permute(2, 0, 1).unsqueeze(0)
+                    y_batch = torch.tensor(y, device=device).permute(2, 0, 1).unsqueeze(0)
                     loss, _ = model(x_batch, y_batch)
                     model.train()
                     logging.info(f"Epoch {epoch+1}: Validation loss = {loss.item():.3f}")
@@ -101,8 +101,8 @@ for i, parameter_set in enumerate(model_parameters):
     # Generate validation image
     x = np.load(path/f"processed_with_corner_mask/93_0_geom.npy")
     y = np.load(path/f"processed_with_corner_mask/93_U_0_4.npy")
-    x_batch = torch.tensor(x).permute(2, 0, 1).unsqueeze(0).to(device)
-    y_batch = torch.tensor(y).permute(2, 0, 1).unsqueeze(0).to(device)
+    x_batch = torch.tensor(x, device=device).permute(2, 0, 1).unsqueeze(0)
+    y_batch = torch.tensor(y, device=device).permute(2, 0, 1).unsqueeze(0)
     model.eval()
     _, img = model(x_batch, y_batch)
     img = img.squeeze().permute(1,2,0).to("cpu").detach().numpy()
