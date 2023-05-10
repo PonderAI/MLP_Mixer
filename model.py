@@ -61,7 +61,7 @@ class MixerLayer(nn.Module):
             MlpLayer(embd_channels, n_patches * f_hidden),
         )
 
-        self.hyperpatch_mix = nn.Sequential(
+        self.neighbourhood_mix = nn.Sequential(
             nn.LayerNorm(embd_channels),
             Rearrange('b h w c -> b c h w'),
             nn.Conv2d(embd_channels, embd_channels, kernel=neighbourhood, stride=1, padding=neighbourhood//2),
@@ -73,7 +73,7 @@ class MixerLayer(nn.Module):
     def forward(self, x):
         x = x + self.token_mix(x)
         x = x + self.channel_mix(x)
-        x = x + self.hyperpatch_mix(x)
+        x = x + self.neighbourhood_mix(x)
         return x
 
 
