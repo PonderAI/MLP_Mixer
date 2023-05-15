@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import torch.nn as nn
 from model import Img2ImgMixer
 from model_config import model_parameters
 
@@ -31,6 +32,7 @@ for i, parameter_set in enumerate(model_parameters):
     #Initialise model and count parameters
     model = Img2ImgMixer(**parameter_set)
     model.to(device)
+    loss_function = nn.MSELoss()
     optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.StepLR(optimiser, step_size=step_size, gamma=gamma)
     parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -68,8 +70,10 @@ for i, parameter_set in enumerate(model_parameters):
                     x_batch = torch.tensor(x, device=device).permute(2, 0, 1).unsqueeze(0)
                     y_batch = torch.tensor(y, device=device).permute(2, 0, 1).unsqueeze(0)
 
-                    loss, _ = model(x_batch, y_batch)
+                    output = model(x_batch)
+                    target = torch.clamp(x_batch + y_batch, 0, 1)
                     optimiser.zero_grad(set_to_none=True)
+                    loss = loss_function(output, target)
                     loss.backward()
                     optimiser.step()
             logging.info(f"Epoch {epoch+1}: loss = {loss.item():.3f}")
@@ -104,7 +108,7 @@ for i, parameter_set in enumerate(model_parameters):
     x_batch = torch.tensor(x, device=device).permute(2, 0, 1).unsqueeze(0)
     y_batch = torch.tensor(y, device=device).permute(2, 0, 1).unsqueeze(0)
     model.eval()
-    _, img = model(x_batch, y_batch)
+    img = model(x_batch)
     img = img.squeeze().permute(1,2,0).to("cpu").detach().numpy()
     plt.imshow(img)
     plt.savefig(path/f'validation_images/model_{i+1}.png')

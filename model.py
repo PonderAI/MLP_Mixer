@@ -64,9 +64,9 @@ class MixerLayer(nn.Module):
         self.neighbourhood_mix = nn.Sequential(
             nn.LayerNorm(embd_channels),
             Rearrange('b h w c -> b c h w'),
-            nn.Conv2d(embd_channels, embd_channels, kernel=neighbourhood, stride=1, padding=neighbourhood//2),
+            nn.Conv2d(embd_channels, embd_channels, kernel_size=neighbourhood, stride=1, padding=neighbourhood//2),
             nn.GELU(),
-            nn.Conv2d(embd_channels, embd_channels, kernel=neighbourhood, stride=1, padding=neighbourhood//2),
+            nn.Conv2d(embd_channels, embd_channels, kernel_size=neighbourhood, stride=1, padding=neighbourhood//2),
             Rearrange('b c h w -> b h w c'),
         )
 
@@ -109,9 +109,7 @@ class Img2ImgMixer(nn.Module):
         self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels, neighbourhood) for _ in range(n_layers)])
         self.patch_expand = PatchExpand(patch_size, embd_channels, img_channels)
 
-        self.loss = nn.MSELoss()
-
-    def forward(self, x, y): # x = [B, C, H, W] -> [B, 3, 1024, 1024]
+    def forward(self, x): # x = [B, C, H, W] -> [B, 3, 1024, 1024]
         x_learned = self.patch_embd(x) # [B, Nh, Nw, C] -> [B, 64, 64, 512]
 
         for layer in self.layers:
@@ -120,8 +118,6 @@ class Img2ImgMixer(nn.Module):
         x_learned = self.patch_expand(x_learned)
 
         x_learned = torch.clamp(x + x_learned, 0, 1) # # Geometry + learned flowfield
-        y = torch.clamp(x + y, 0, 1) # Geometry + flowfield
 
-        loss = self.loss(x_learned, y)
 
-        return loss, x_learned
+        return x_learned
