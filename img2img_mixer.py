@@ -86,7 +86,9 @@ for i, parameter_set in enumerate(model_parameters):
                     y = np.load(path/f"processed_with_corner_mask/93_U_0_4.npy")
                     x_batch = torch.tensor(x, device=device).permute(2, 0, 1).unsqueeze(0)
                     y_batch = torch.tensor(y, device=device).permute(2, 0, 1).unsqueeze(0)
-                    loss, _ = model(x_batch, y_batch)
+                    output = model(x_batch)
+                    target = torch.clamp(x_batch + y_batch, 0, 1)
+                    loss = loss_function(output, target)
                     model.train()
                     logging.info(f"Epoch {epoch+1}: Validation loss = {loss.item():.3f}")
 
@@ -114,7 +116,7 @@ for i, parameter_set in enumerate(model_parameters):
     plt.savefig(path/f'validation_images/model_{i+1}.png')
 
     # Clean up
-    del model, _
+    del model
     gc.collect()
     torch.cuda.empty_cache()
 
