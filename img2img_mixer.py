@@ -18,8 +18,8 @@ logging.info(f"""Device: {device}""")
 
 # Training Parameters
 n_epochs = 10
-learning_rate = 1e-3
-step_size = 5   # number of epochs at which learning rate decays
+learning_rate = 0.000105923# 1e-3
+step_size = 2   # number of epochs at which learning rate decays
 gamma = 0.5      # facetor by which learning rate decays
 
 path = Path("spacio_training_2")
@@ -74,6 +74,8 @@ for i, parameter_set in enumerate(model_parameters):
                     target = torch.clamp(x_batch + y_batch, 0, 1)
                     optimiser.zero_grad(set_to_none=True)
                     loss = loss_function(output, target)
+                    if epoch == 0 and sample == 0:
+                        logging.info(f"initial loss: {loss.item():.3f}")
                     loss.backward()
                     optimiser.step()
             logging.info(f"Epoch {epoch+1}: loss = {loss.item():.3f}")
@@ -113,7 +115,17 @@ for i, parameter_set in enumerate(model_parameters):
     img = model(x_batch)
     img = img.squeeze().permute(1,2,0).to("cpu").detach().numpy()
     plt.imshow(img)
-    plt.savefig(path/f'validation_images/model_{i+1}.png')
+    plt.savefig(path/f'validation_images/model_{i+1}_1.png')
+
+    x = np.load(path/f"processed_with_corner_mask/186_0_geom.npy")
+    y = np.load(path/f"processed_with_corner_mask/186_U_0_4.npy")
+    x_batch = torch.tensor(x, device=device).permute(2, 0, 1).unsqueeze(0)
+    y_batch = torch.tensor(y, device=device).permute(2, 0, 1).unsqueeze(0)
+    model.eval()
+    img = model(x_batch)
+    img = img.squeeze().permute(1,2,0).to("cpu").detach().numpy()
+    plt.imshow(img)
+    plt.savefig(path/f'validation_images/model_{i+1}_2.png')
 
     # Clean up
     del model

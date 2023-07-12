@@ -64,9 +64,9 @@ class MixerLayer(nn.Module):
         self.neighbourhood_mix = nn.Sequential(
             nn.LayerNorm(embd_channels),
             Rearrange('b h w c -> b c h w'),
-            nn.Conv2d(embd_channels, embd_channels, kernel_size=neighbourhood, stride=1, padding=neighbourhood//2),
+            nn.Conv2d(embd_channels, embd_channels, kernel_size=neighbourhood, stride=1, padding=neighbourhood//2,),
             nn.GELU(),
-            nn.Conv2d(embd_channels, embd_channels, kernel_size=neighbourhood, stride=1, padding=neighbourhood//2),
+            nn.Conv2d(embd_channels, embd_channels, kernel_size=neighbourhood, stride=1, padding=neighbourhood//2,),
             Rearrange('b c h w -> b h w c'),
         )
 
