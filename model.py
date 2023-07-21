@@ -111,16 +111,16 @@ class Img2ImgMixer(nn.Module):
         self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels, neighbourhood) for _ in range(n_layers)])
         self.patch_expand = PatchExpand(patch_size, embd_channels, img_channels)
 
-        self.v_embd_tbl = nn.Embedding(n_patches, embd_channels)
-        self.h_embd_tbl = nn.Embedding(n_patches, embd_channels)
+        self.v_embd_tbl = nn.Embedding(n_patches, embd_channels//2)
+        self.h_embd_tbl = nn.Embedding(n_patches, embd_channels//2)
 
     def generate_pos_embd_tbl(self):
         device = "cuda:0"
-        self.h_embd = self.h_embd_tbl(torch.arange(self.n_patches, device=device))
         self.v_embd = self.v_embd_tbl(torch.arange(self.n_patches, device=device))
-        self.tmp_h = torch.vstack([self.h_embd.reshape(1, self.n_patches, self.embd_channels)]*self.n_patches)
-        self.tmp_v = torch.hstack([self.v_embd.reshape(self.n_patches, 1, self.embd_channels)]*self.n_patches)
-        return (self.tmp_h + self.tmp_v)
+        self.h_embd = self.h_embd_tbl(torch.arange(self.n_patches, device=device))
+        self.tmp_v = torch.hstack([self.v_embd.reshape(self.n_patches, 1, self.embd_channels//2)]*self.n_patches)
+        self.tmp_h = torch.vstack([self.h_embd.reshape(1, self.n_patches, self.embd_channels//2)]*self.n_patches)
+        return  torch.dstack([self.tmp_v , self.tmp_h])
         
 
     def forward(self, x): # x = [B, C, H, W] -> [B, 3, 1024, 1024]
