@@ -17,15 +17,15 @@ P = Patches
 
 class PatchEmbedding(nn.Module):
 
-    def __init__(self, img_channels, embd_dim, patch_size):
+    def __init__(self, img_channels, embd_channels, patch_size):
         super().__init__()
-        self.pos_embd = nn.Sequential(
-            nn.Conv2d(img_channels, embd_dim, patch_size, patch_size), # [B, C, Nh, Nw] -> [B, 512, 64, 64]
+        self.patch_embd = nn.Sequential(
+            nn.Conv2d(img_channels, embd_channels, patch_size, patch_size), # [B, C, Nh, Nw] -> [B, 512, 64, 64]
             Rearrange('b c h w -> b h w c'), # [B, Nh, Nw, C] -> [N, 64, 64, 512] 
         )
-    
+        
     def forward(self, x):
-        return self.pos_embd(x)
+        return self.patch_embd(x)
 
 
 class MlpLayer(nn.Module):
@@ -105,12 +105,27 @@ class PatchExpand(nn.Module):
 class Img2ImgMixer(nn.Module):
     def __init__(self, img_channels, embd_channels, patch_size, n_patches, f_hidden, neighbourhood, n_layers) -> None:
         super().__init__()
+        self.n_patches = n_patches
+        self.embd_channels = embd_channels
         self.patch_embd = PatchEmbedding(img_channels, embd_channels, patch_size)
         self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels, neighbourhood) for _ in range(n_layers)])
         self.patch_expand = PatchExpand(patch_size, embd_channels, img_channels)
 
+        self.v_embd_tbl = nn.Embedding(n_patches, embd_channels)
+        self.h_embd_tbl = nn.Embedding(n_patches, embd_channels)
+
+    def generate_pos_embd_tbl(self):
+        device = "cuda:0"
+        self.h_embd = self.h_embd_tbl(torch.arange(self.n_patches, device=device))
+        self.v_embd = self.v_embd_tbl(torch.arange(self.n_patches, device=device))
+        self.tmp_h = torch.vstack([self.h_embd.reshape(1, self.n_patches, self.embd_channels)]*self.n_patches)
+        self.tmp_v = torch.hstack([self.v_embd.reshape(self.n_patches, 1, self.embd_channels)]*self.n_patches)
+        return (self.tmp_h + self.tmp_v)
+        
+
     def forward(self, x): # x = [B, C, H, W] -> [B, 3, 1024, 1024]
-        x_learned = self.patch_embd(x) # [B, Nh, Nw, C] -> [B, 64, 64, 512]
+        pos_embd = self.generate_pos_embd_tbl()
+        x_learned = self.patch_embd(x) + pos_embd # [B, Nh, Nw, C] -> [B, 64, 64, 512]
 
         for layer in self.layers:
             x_learned = layer(x_learned)
