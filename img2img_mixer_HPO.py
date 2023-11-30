@@ -30,7 +30,7 @@ class TestTrainData(Dataset):
     def __init__(self, file_dir, file_index) -> None:
         self.root_dir = file_dir
         self.file_index = pd.read_csv(file_index)
-        self.path = Path.home()/"documents/Python Projects/MLP_Mixer/spacio_training_2/processed_with_corner_mask"
+        self.path = Path.home()/"documents/Python Projects/MLP_Mixer/spacio_training_2/processed_with_features"
 
     def __len__(self):
         return len(self.file_index)
@@ -53,7 +53,8 @@ def train_model(config, data_dir=None):
 
     n_patches = 1024 // config['patch_size']
 
-    model = Img2ImgMixer(img_channels=3,
+    model = Img2ImgMixer(in_channels=3,
+                        out_channels=7,
                         embd_channels=config['embd_channels'], 
                         patch_size=config['patch_size'], 
                         n_patches=n_patches, 
@@ -76,7 +77,7 @@ def train_model(config, data_dir=None):
     path = Path.home()/data_dir
     print(path.absolute())
 
-    train_set, test_set = load_data(path/"processed_with_corner_mask", path/"test_train_matrix.csv", 0.8)
+    train_set, test_set = load_data(path/"processed_with_features", path/"test_train_matrix.csv", 0.8)
 
     train_loader = DataLoader(train_set,
                               batch_size=1, shuffle=True,

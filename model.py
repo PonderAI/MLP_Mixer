@@ -99,17 +99,15 @@ class PatchExpand(nn.Module):
 
         return self.proj(x) # [B, 3, H, W]
     
-        return nn.ConvTranspose2d(embd_channels, img_channels, kernel_size=1)
-
 
 class Img2ImgMixer(nn.Module):
-    def __init__(self, img_channels, embd_channels, patch_size, n_patches, f_hidden, neighbourhood, n_layers) -> None:
+    def __init__(self, in_channels, out_channels, embd_channels, patch_size, n_patches, f_hidden, neighbourhood, n_layers) -> None:
         super().__init__()
         self.n_patches = n_patches
         self.embd_channels = embd_channels
-        self.patch_embd = PatchEmbedding(img_channels, embd_channels, patch_size)
+        self.patch_embd = PatchEmbedding(in_channels, embd_channels, patch_size)
         self.layers = nn.ModuleList([MixerLayer(n_patches, f_hidden, embd_channels, neighbourhood) for _ in range(n_layers)])
-        self.patch_expand = PatchExpand(patch_size, embd_channels, img_channels)
+        self.patch_expand = PatchExpand(patch_size, embd_channels, out_channels)
 
         self.v_embd_tbl = nn.Embedding(n_patches, embd_channels//2)
         self.h_embd_tbl = nn.Embedding(n_patches, embd_channels//2)
@@ -132,7 +130,10 @@ class Img2ImgMixer(nn.Module):
 
         x_learned = self.patch_expand(x_learned)
 
-        x_learned = torch.clamp(x + x_learned, 0, 1) # # Geometry + learned flowfield
+        # x_learned = torch.clamp(x + x_learned, 0, 1) # # Geometry + learned flowfield
+        geom = torch.stack([x[:, 0, :, :]]*3, 1)
+        # x_learned = torch.clamp(geom + x_learned, -1, 1) # # Geometry + learned flowfield
+        x_learned = geom + x_learned # # Geometry + learned flowfield
 
 
         return x_learned
