@@ -1,0 +1,16 @@
+{
+    "data_dir": "./spacio_training_2",
+    "data_set": "processed_actual_V",
+    "train_epochs" : 20,
+    "img_size": 1024,
+    "in_channels": 1,
+    "out_channels": 3,
+    "embd_channels": 256,
+    "patch_size": 8,
+    "f_hidden": 8,
+    "neighbourhood": 7,
+    "n_layers": 10,
+    "learning_rate": 0.0001270083664733935,
+    "gamma":0.3,
+    "step_size": 5
+}
