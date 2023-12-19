@@ -1,6 +1,6 @@
 from pathlib import Path
 import logging
-import json
+import tomli
 import numpy as np
 import pandas as pd
 import torch
@@ -48,7 +48,7 @@ def train_model(img_size, in_channels, out_channels, embd_channels, patch_size,
                         patch_size=patch_size, 
                         n_patches=n_patches, 
                         f_hidden=f_hidden, 
-                        neighbourhood=int(neighbourhood), 
+                        neighbourhood=neighbourhood, 
                         n_layers=n_layers)
 
     model.to(device)
@@ -117,8 +117,8 @@ def train_model(img_size, in_channels, out_channels, embd_channels, patch_size,
         
 def main():
 
-    with open(Path("src/config.json"), "r") as c:
-        config = json.load(c)
+    with open(Path("src/config.toml"), "rb") as c:
+        config = tomli.load(c)
 
     path = Path(config["data_dir"])
 
